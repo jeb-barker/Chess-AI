@@ -1,8 +1,12 @@
 import copy
 import random
 
+import cairosvg
 import chess
 import chess.svg
+import PIL
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPDF, renderPM
 
 
 class Best_AI_bot:
@@ -11,19 +15,19 @@ class Best_AI_bot:
         self.directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
         self.opposite_color = {chess.BLACK: chess.WHITE, chess.WHITE: chess.BLACK}
 
-    def best_strategy(self, board, color):
+    def best_strategy(self, board, color, depth):
         # returns best move
 
-        best_move = self.alphabeta(board, color, 4, -10000, 10000)
+        best_move = self.alphabeta(board, color, depth, -10000, 10000)
         return best_move
 
     def max_value(self, board, color, search_depth, alpha, beta):
         # return value and state: (val, state)
         poss = board.legal_moves
         # print(poss)
-        if search_depth == 0 or poss is None or self.is_done(board, color) is None:
+        if search_depth == 0 or poss is None or self.is_done(board, color) is True:
             return self.evaluate(board, color, poss)
-        v = (-10000, board)
+        v = (-1000000, board)
 
         for s in poss:
             b = self.make_move(board, color, s)
@@ -42,9 +46,9 @@ class Best_AI_bot:
     def min_value(self, board, color, search_depth, alpha, beta):
         # return value and state: (val, state)
         poss = board.legal_moves
-        if search_depth == 0 or poss is None or self.is_done(board, color) is None:
-            return self.evaluate(board, color, poss)
-        v = (10000, board)
+        if search_depth == 0 or poss is None or self.is_done(board, color) is True:
+            return -self.evaluate(board, color, poss)
+        v = (1000000, board)
 
         for s in poss:
             b = self.make_move(board, color, s)
@@ -71,12 +75,12 @@ class Best_AI_bot:
         return b
 
     def is_done(self, my_board, color):
-        return True if my_board.is_game_over() or my_board.can_claim_draw() else False
+        return True if my_board.is_checkmate() or my_board.is_stalemate() or my_board.can_claim_draw() else False
 
     def evaluate(self, board, color, possible_moves):
         fen = board.board_fen()
         if board.is_checkmate():
-            print("CHECKMATE")
+            # print("CHECKMATE")
             return -100000
         piece_total = 0
         for piece in fen:
@@ -121,8 +125,9 @@ class Best_AI_bot:
         for square in chess.SQUARES:
             attack_total += 1 if board.is_attacked_by(color, square) else 0
             attack_total -= 1 if board.is_attacked_by(not color, square) else 0
-        print("piece:", piece_total, "|attack:", attack_total)
-        return piece_total * 50 + attack_total//2
+        # print("piece:", piece_total, "|attack:", attack_total)
+
+        return piece_total * 35 + attack_total
 
 
 board = chess.Board()
@@ -130,11 +135,60 @@ squares = board.attacks(chess.E4)
 open('out.svg', 'w').write(chess.svg.board(board, size=500))
 bbot = Best_AI_bot()
 print()
+from tkinter import *
+tk = Tk()
+# frame=tk.Frame(main)
+from PIL import Image, ImageTk
+
+img = Image.open('temp.png')
+pimg = ImageTk.PhotoImage(img)
+size = img.size
+frame = Canvas(tk, width=size[0], height=size[1])
+frame.pack()
+frame.create_image(0, 0, anchor='nw', image=pimg)
+tk.update()
 while True:
-    board.push(Best_AI_bot.best_strategy(bbot, board, True)[1])
+    board.push(Best_AI_bot.best_strategy(bbot, board, True, 3)[1])
     open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
+
+    # drawing = svg2rlg("out.svg")
+    # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
+    cairosvg.svg2png(url='out.svg', write_to='temp.png')
+    img = Image.open('temp.png')
+    pimg = ImageTk.PhotoImage(img)
+    frame.create_image(0, 0, anchor='nw', image=pimg)
+
+    tk.update()
+
+    print("white moved")
+    print(board)
+    if board.is_checkmate():
+        print("White wins")
+        break
+    if board.is_game_over():
+        print("Game over")
+        break
     lm = [a for a in board.legal_moves]
     for index, value in enumerate(lm):
         print(index, " ", value)
-    board.push(lm[int(input())])
+
+    board.push(Best_AI_bot.best_strategy(bbot, board, False, 4)[1])
+    # board.push(random.choice(lm))
+    # board.push(chess.Move.from_uci(input()))
+    print("black moved")
     open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
+    # drawing = svg2rlg("out.svg")
+    # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
+    cairosvg.svg2png(url='out.svg', write_to='temp.png')
+    img = Image.open('temp.png')
+    pimg = ImageTk.PhotoImage(img)
+    frame.create_image(0, 0, anchor='nw', image=pimg)
+
+    tk.update()
+    print(board)
+    if board.is_checkmate():
+        print("Black wins")
+        break
+    if board.is_game_over():
+        print("Game over")
+        break
