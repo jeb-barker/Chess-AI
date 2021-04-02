@@ -123,8 +123,8 @@ class Best_AI_bot:
         #print()
         attack_total = 0
         for square in chess.SQUARES:
-            attack_total += 1 if board.is_attacked_by(color, square) else 0
-            attack_total -= 1 if board.is_attacked_by(not color, square) else 0
+            attack_total += 1 if board.is_attacked_by(color, square) and board.piece_at(square) is None else 0
+            attack_total -= 1 if board.is_attacked_by(not color, square) and board.piece_at(square) is None else 0
         # print("piece:", piece_total, "|attack:", attack_total)
 
         return piece_total * 35 + attack_total
@@ -134,7 +134,7 @@ board = chess.Board()
 squares = board.attacks(chess.E4)
 open('out.svg', 'w').write(chess.svg.board(board, size=500))
 bbot = Best_AI_bot()
-print()
+# print(board.piece_at(chess.A4))
 from tkinter import *
 tk = Tk()
 # frame=tk.Frame(main)
@@ -192,3 +192,4 @@ while True:
     if board.is_game_over():
         print("Game over")
         break
+    # break
