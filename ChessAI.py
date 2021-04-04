@@ -30,14 +30,15 @@ class Candidate_AI_bot:
         v = (-1000000, board)
 
         for s in poss:
-            b = self.make_move(board, color, s)
-            min = self.min_value(b, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
+            board.push(s)
+            min = self.min_value(board, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
                                  beta)
             try:
                 min = min[0]
             except TypeError:
                 pass
             v = max(v, (min, s), key=lambda item: item[0])
+            board.pop()
             if v[0] > beta:
                 return v
             alpha = max(v[0], alpha)
@@ -51,17 +52,19 @@ class Candidate_AI_bot:
         v = (1000000, board)
 
         for s in poss:
-            b = self.make_move(board, color, s)
-            maxV = self.max_value(b, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
+            board.push(s)
+            maxV = self.max_value(board, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
                                   beta)
             try:
                 maxV = maxV[0]
             except TypeError:
                 pass
             v = min(v, (maxV, s), key=lambda item: item[0])
+            board.pop()
             if v[0] < alpha:
                 return v
             beta = min(beta, v[0])
+
         return v
 
     def alphabeta(self, board, color, search_depth, alpha, beta):
@@ -151,14 +154,15 @@ class Best_AI_bot:
         v = (-1000000, board)
 
         for s in poss:
-            b = self.make_move(board, color, s)
-            min = self.min_value(b, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
+            board.push(s)
+            min = self.min_value(board, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
                                  beta)
             try:
                 min = min[0]
             except TypeError:
                 pass
             v = max(v, (min, s), key=lambda item: item[0])
+            board.pop()
             if v[0] > beta:
                 return v
             alpha = max(v[0], alpha)
@@ -172,17 +176,19 @@ class Best_AI_bot:
         v = (1000000, board)
 
         for s in poss:
-            b = self.make_move(board, color, s)
-            maxV = self.max_value(b, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
+            board.push(s)
+            maxV = self.max_value(board, chess.WHITE if color == chess.BLACK else chess.BLACK, search_depth - 1, alpha,
                                   beta)
             try:
                 maxV = maxV[0]
             except TypeError:
                 pass
             v = min(v, (maxV, s), key=lambda item: item[0])
+            board.pop()
             if v[0] < alpha:
                 return v
             beta = min(beta, v[0])
+
         return v
 
     def alphabeta(self, board, color, search_depth, alpha, beta):
@@ -246,11 +252,11 @@ class Best_AI_bot:
         #print()
         attack_total = 0
         for square in chess.SquareSet(chess.BB_CENTER):
-            attack_total += 1 if board.is_attacked_by(color, square) and board.piece_at(square) is None else 0
-            attack_total -= 1 if board.is_attacked_by(not color, square) and board.piece_at(square) is None else 0
+            attack_total += 1 if board.is_attacked_by(color, square)  else 0
+            attack_total -= 1 if board.is_attacked_by(not color, square)  else 0
         # print("piece:", piece_total, "|attack:", attack_total)
 
-        return piece_total * 35 + attack_total
+        return piece_total * 50 + attack_total
 
 
 board = chess.Board()
@@ -258,12 +264,15 @@ squares = board.attacks(chess.E4)
 open('out.svg', 'w').write(chess.svg.board(board, size=500))
 bbot = Best_AI_bot()
 bot2 = Candidate_AI_bot()
+# bbot = Candidate_AI_bot()
+# bot2 = Best_AI_bot()
 # print(board.piece_at(chess.A4))
 from tkinter import *
 tk = Tk()
 # frame=tk.Frame(main)
 from PIL import Image, ImageTk
-
+open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
+cairosvg.svg2png(url='out.svg', write_to='temp.png')
 img = Image.open('temp.png')
 pimg = ImageTk.PhotoImage(img)
 size = img.size
@@ -271,8 +280,18 @@ frame = Canvas(tk, width=size[0], height=size[1])
 frame.pack()
 frame.create_image(0, 0, anchor='nw', image=pimg)
 tk.update()
+import time
 while True:
-    board.push(Best_AI_bot.best_strategy(bbot, board, True, 3)[1])
+    curtime = time.time()
+    while True:
+        try:
+            move = Best_AI_bot.best_strategy(bbot, board, True, 4)
+            # move = Candidate_AI_bot.best_strategy(bbot, board, True, 4)
+            break
+        except ValueError:
+            print("ERROR: Illegal Move, Try Again")
+    board.push(move[1])
+    print(move, " White: ", time.time() - curtime, "\n")
 
     open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
     # drawing = svg2rlg("out.svg")
@@ -291,13 +310,25 @@ while True:
         print("Game over")
         break
     lm = [a for a in board.legal_moves]
-    for index, value in enumerate(lm):
-        print(index, " ", value)
+    # for index, value in enumerate(lm):
+    #     print(index, " ", value)
 
-    board.push(Candidate_AI_bot.best_strategy(bot2, board, False, 3)[1])
+    curtime = time.time()
+    # move = Best_AI_bot.best_strategy(bot2, board, False, 4)
+    # move = Candidate_AI_bot.best_strategy(bot2, board, False, 4)
+    # board.push(move[1])
+    # print(move, " Black: ",time.time() - curtime, "\n")
 
     # board.push(random.choice(lm))
-    # board.push(chess.Move.from_uci(input()))
+    while True:
+        try:
+            move = input()
+            if chess.Move.from_uci(move) not in lm:
+                raise ValueError
+            board.push(chess.Move.from_uci(move))
+            break
+        except ValueError:
+            print("ERROR: Illegal Move, Try Again")
     print("black moved")
     open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
     # drawing = svg2rlg("out.svg")
