@@ -25,9 +25,15 @@ class Candidate_AI_bot:
                 # best_move = best_move2
                 # print(best_move)
             except TimeoutError:
-                print(x - 1)
-                break
-        return best_move
+                if x == 1:
+                    best_move = random.choice(board.legal_moves)
+                    print(x - 1)
+                    break
+                else:
+                    d = x - 1
+                    print(x - 1)
+                    break
+        return best_move, d
 
     def max_value(self, board, color, search_depth, alpha, beta, maxTime, startTime):
         # return value and state: (val, state)
@@ -91,7 +97,7 @@ class Candidate_AI_bot:
         return b
 
     def is_done(self, my_board, color):
-        return True if my_board.is_checkmate() or my_board.is_stalemate() or my_board.can_claim_draw() else False
+        return True if my_board.is_checkmate() or my_board.is_stalemate() else False
 
     def evaluate(self, board, color, possible_moves):
         fen = board.board_fen()
@@ -156,15 +162,18 @@ class Best_AI_bot:
         # returns best move
         # boardC = board.copy()
         # best_move = self.alphabeta(board.copy(), color, 1, -10000, 10000, maxTime, startTime)
-        for x in range(1, 100):
+        for x in range(0, 100):
             try:
                 best_move = self.alphabeta(board.copy(), color, x, -10000, 10000, maxTime, startTime)
                 # best_move = best_move2
                 # print(best_move)
             except TimeoutError:
-                print(x - 1)
+                if x == 1:
+                    best_move = random.choice(board.legal_moves)
+                d = x - 1
+                print(d)
                 break
-        return best_move
+        return best_move, d
 
     def max_value(self, board, color, search_depth, alpha, beta, maxTime, startTime):
         # return value and state: (val, state)
@@ -219,7 +228,7 @@ class Best_AI_bot:
     def alphabeta(self, board, color, search_depth, alpha, beta, maxTime, startTime):
         # returns best "value" while also pruning
         return self.max_value(board, color, search_depth, alpha, beta, maxTime,
-                              startTime) #  if color else self.min_value(board, color, search_depth, alpha, beta, maxTime, startTime)
+                              startTime)  # if color else self.min_value(board, color, search_depth, alpha, beta, maxTime, startTime)
 
     def make_move(self, board, color, move):
         # returns board that has been updated
@@ -228,53 +237,22 @@ class Best_AI_bot:
         return b
 
     def is_done(self, my_board, color):
-        return True if my_board.is_checkmate() or my_board.is_stalemate() or my_board.can_claim_draw() else False
+        return True if my_board.is_checkmate() or my_board.is_stalemate() or my_board.is_game_over() else False
 
     def evaluate(self, board, color, possible_moves):
         fen = board.board_fen()
         if board.is_checkmate():
             # print("CHECKMATE")
             return -100000 + len(board.move_stack) if board.turn is color else 100000 - len(board.move_stack)
-        if board.is_game_over():
-            return -10000
+        if board.is_repetition(3):
+            return -100000
+        check_bias = 0
+        if board.is_check() and board.turn is color:
+            check_bias -= 2
+        if board.is_check() and board.turn is not color:
+            check_bias += 2
         piece_total = 0
-        for piece in fen:
-            if not color:
-                if piece == "p":
-                    piece_total += 1
-                elif piece == "b" or piece == "n":
-                    piece_total += 3
-                elif piece == "r":
-                    piece_total += 5
-                elif piece == "q":
-                    piece_total += 9
-                elif piece == "P":
-                    piece_total -= 1
-                elif piece == "B" or piece == "N":
-                    piece_total -= 3
-                elif piece == "R":
-                    piece_total -= 5
-                elif piece == "Q":
-                    piece_total -= 9
-            else:
-                if piece == "p":
-                    piece_total -= 1
-                elif piece == "b" or piece == "n":
-                    piece_total -= 3
-                elif piece == "r":
-                    piece_total -= 5
-                elif piece == "q":
-                    piece_total -= 9
-                elif piece == "P":
-                    piece_total += 1
-                elif piece == "B" or piece == "N":
-                    piece_total += 3
-                elif piece == "R":
-                    piece_total += 5
-                elif piece == "Q":
-                    piece_total += 9
         # print(board)
-
         # print()
         attack_total = 0
         for square in chess.SquareSet(chess.BB_CENTER):
@@ -282,16 +260,49 @@ class Best_AI_bot:
             attack_total -= 1 if board.is_attacked_by(not color, square) else 0
 
         pawn_rank_total = 0
-        for square in chess.SQUARES:
+        # print(str(board))
+        bstring = [a for a in str(board) if a != " " and a != "\n"]
+        for index, square in enumerate(bstring):
             # print(board.piece_at(square))
-            if str(board.piece_at(square)) is ("p" if not color else "P"):
-                if board.color_at(square) is color:
-                    pawn_rank_total += square // 8 + 1
-                else:
-                    pawn_rank_total -= 7 - square // 8
+            if not color:
+                if square == "p":
+                    piece_total += 1
+                    pawn_rank_total -= 7 - index // 8
+                elif square == "b" or square == "n":
+                    piece_total += 3
+                elif square == "r":
+                    piece_total += 5
+                elif square == "q":
+                    piece_total += 9
+                elif square == "P":
+                    piece_total -= 1
+                elif square == "B" or square == "N":
+                    piece_total -= 3
+                elif square == "R":
+                    piece_total -= 5
+                elif square == "Q":
+                    piece_total -= 9
+            else:
+                if square == "p":
+                    piece_total -= 1
+                    pawn_rank_total += index // 8 + 1
+                elif square == "b" or square == "n":
+                    piece_total -= 3
+                elif square == "r":
+                    piece_total -= 5
+                elif square == "q":
+                    piece_total -= 9
+                elif square == "P":
+                    piece_total += 1
+                elif square == "B" or square == "N":
+                    piece_total += 3
+                elif square == "R":
+                    piece_total += 5
+                elif square == "Q":
+                    piece_total += 9
 
-        # print("piece:", piece_total, "|attack:", attack_total, "|pawn:", pawn_rank_total)
-        return piece_total*2 + attack_total / 40 + pawn_rank_total / 30
+        # print("pawn:", pawn_rank_total)
+        return (piece_total * 15) + (attack_total / (.4 * len(board.move_stack) + 1)) + ((1 if color else -1) * (pawn_rank_total) * .1 * len(board.move_stack)) + check_bias
 
 
 board = chess.Board()
@@ -318,13 +329,19 @@ frame.pack()
 frame.create_image(0, 0, anchor='nw', image=pimg)
 tk.update()
 print(Best_AI_bot.evaluate(bbot, board, True, []))
+print(len(board.move_stack))
 import time
 
+depth_list = []
+depth_list_2 = []
+depth = 5
 while True:
     curtime = time.time()
     while True:
         try:
-            move = Candidate_AI_bot.best_strategy(bot2, board, True, 4, 1, curtime)
+            curtime = time.time()
+            move, d = Best_AI_bot.best_strategy(bbot, board, True, 4, depth, time.time())
+            depth_list_2.append(d)
             # move = Candidate_AI_bot.best_strategy(bbot, board, True, 4)
             break
         except ValueError:
@@ -332,7 +349,7 @@ while True:
     board.push(move[1])
     print(move, " White: ", time.time() - curtime, "\n")
 
-    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
+    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=False))
     # drawing = svg2rlg("out.svg")
     # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
     cairosvg.svg2png(url='out.svg', write_to='temp.png')
@@ -344,10 +361,16 @@ while True:
     print(board)
     if board.is_checkmate():
         print("White wins")
-        break
+        print("Black Depth Avg: ", sum(depth_list) / len(depth_list))
+        print("White Depth Avg: ", sum(depth_list_2) / len(depth_list_2))
+        while True:
+            pass
     if board.is_game_over():
         print("Game over")
-        break
+        print("Black Depth Avg: ", sum(depth_list) / len(depth_list))
+        print("White Depth Avg: ", sum(depth_list_2) / len(depth_list_2))
+        while True:
+            pass
     lm = [a for a in board.legal_moves]
     # for index, value in enumerate(lm):
     #     print(index, " ", value)
@@ -361,19 +384,23 @@ while True:
     # board.push(random.choice(lm))  # TODO RANDOM
     while True:
         try:
-            # move = input()  # TODO HUMAN INPUT BLACK
-
-            move = Best_AI_bot.best_strategy(bbot, board, False, 4, 1, curtime)
-            # if chess.Move.from_uci(move) not in lm:
-            # raise ValueError
-            # board.push(chess.Move.from_uci(move))
-            board.push(move[1])
+            move = input()  # TODO HUMAN INPUT BLACK
+            curtime = time.time()
+            # move, d = Candidate_AI_bot.best_strategy(bot2, board, False, 4, depth, time.time())
+            # move, d = Best_AI_bot.best_strategy(bbot, board, False, 4, depth, time.time())
+            depth_list.append(d)
+            if chess.Move.from_uci(move) not in lm:
+                raise ValueError
+            board.push(chess.Move.from_uci(move))
+            # board.push(move[1])
             break
         except ValueError:
             print("ERROR: Illegal Move, Try Again")
+        except TypeError:
+            board.push(random.choice(lm))
     print("black moved")
     print(move, " Black: ", time.time() - curtime, "\n")
-    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
+    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=False))
     # drawing = svg2rlg("out.svg")
     # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
     cairosvg.svg2png(url='out.svg', write_to='temp.png')
@@ -384,8 +411,14 @@ while True:
     print(board)
     if board.is_checkmate():
         print("Black wins")
-        break
+        print("Black Depth Avg: ", sum(depth_list) / len(depth_list))
+        print("White Depth Avg: ", sum(depth_list_2) / len(depth_list_2))
+        while True:
+            pass
     if board.is_game_over():
         print("Game over")
-        break
+        print("Black Depth Avg: ", sum(depth_list) / len(depth_list))
+        print("White Depth Avg: ", sum(depth_list_2) / len(depth_list_2))
+        while True:
+            pass
     # break
