@@ -349,7 +349,7 @@ while True:
     board.push(move[1])
     print(move, " White: ", time.time() - curtime, "\n")
 
-    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=False))
+    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
     # drawing = svg2rlg("out.svg")
     # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
     cairosvg.svg2png(url='out.svg', write_to='temp.png')
@@ -400,7 +400,7 @@ while True:
             board.push(random.choice(lm))
     print("black moved")
     print(move, " Black: ", time.time() - curtime, "\n")
-    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=False))
+    open('out.svg', 'w').write(chess.svg.board(board, size=500, flipped=True))
     # drawing = svg2rlg("out.svg")
     # renderPM.drawToFile(drawing, "temp.png", fmt="PNG")
     cairosvg.svg2png(url='out.svg', write_to='temp.png')
